@@ -19,10 +19,15 @@ public class PlayerControl : MonoBehaviour {
     public bool Controllable = false;
     public bool Aiming = false;
 
+    [Header("Fire Object")]
     public GameObject Bullet;
+    public GameObject FirePoint;
+    public GameObject BlackPanel;
     RaycastHit AttackHit;
     
     PlayerState playerState;
+
+    Animator animator;
 
     public enum State
     {
@@ -47,6 +52,7 @@ public class PlayerControl : MonoBehaviour {
         Hex.SetActive(false);
         layermask = LayerMask.GetMask("Ground", "UI");
         EnemyLayer = LayerMask.GetMask("Player");
+        animator = GetComponent<Animator>();
         target = this.transform.position;
         state = State.Moving;
         pre_State = state;
@@ -118,6 +124,7 @@ public class PlayerControl : MonoBehaviour {
             if (Input.GetButtonDown("Fire1"))
             {
                 StartCoroutine((EnergySubtract()));
+                StartCoroutine(MoveSpeedSet());
                 target = hit.transform.position;
             }
             /*if (Input.GetButtonDown("Fire2"))
@@ -139,10 +146,15 @@ public class PlayerControl : MonoBehaviour {
             {
                 if (ChoosingEnemy != null)
                 {
-                    ChoosingEnemy.GetComponent<PlayerControl>().Aiming = false;
+                    // ChoosingEnemy.GetComponent<PlayerControl>().Aiming = false;
                 }
                 ChoosingEnemy = AttackHit.transform.gameObject;
-                ChoosingEnemy.GetComponent<PlayerControl>().Aiming = true;
+                transform.LookAt(ChoosingEnemy.transform);
+                Quaternion quaternion = transform.rotation;
+                quaternion.z = 0;
+                quaternion.x = 0;
+                transform.rotation = quaternion;
+                // ChoosingEnemy.GetComponent<PlayerControl>().Aiming = true;
 
             }
 
@@ -150,27 +162,46 @@ public class PlayerControl : MonoBehaviour {
             if (Input.GetButtonDown("Fire1"))
             {
                 StartCoroutine((EnergySubtract()));
-                Physics.Raycast(ray, out AttackHit, 1000, EnemyLayer);
-
-                GameObject g = Instantiate(Bullet, transform.position, Quaternion.identity);
-                g.GetComponent<ShootFireLine>().start = transform.position;
-                g.GetComponent<ShootFireLine>().end = AttackHit.transform.position;
-                Destroy(g, 2f);
+                animator.SetTrigger("Fire");
             }
         }
         else
         {
             if (ChoosingEnemy != null)
             {
-              ChoosingEnemy.GetComponent<PlayerControl>().Aiming = false;
+              // ChoosingEnemy.GetComponent<PlayerControl>().Aiming = false;
               ChoosingEnemy = null;
             }
         }
     }
 
+    void Shoot()
+    {
+        Ray ray = camera.ScreenPointToRay(Input.mousePosition);
+        Physics.Raycast(ray, out AttackHit, 1000, EnemyLayer);
+
+        GameObject g = Instantiate(Bullet, transform.position, Quaternion.identity);
+        g.GetComponent<ShootFireLine>().start = FirePoint.transform.position;
+        Vector3 a = AttackHit.transform.position;
+        a.y += 1;
+        g.GetComponent<ShootFireLine>().end = a;
+        Destroy(g, 2f);
+    }
+
     public void AttackChange()
     {
-        state = State.Attacking;
+        if (state == State.Moving)
+        {
+            animator.SetBool("Aiming", true);
+            state = State.Attacking;
+            BlackPanel.SetActive(true);
+        }
+        else if(state == State.Attacking)
+        {
+            animator.SetBool("Aiming", false);
+            state = State.Moving;
+            BlackPanel.SetActive(false);
+        }
     }
     public void MoveChange()
     {
@@ -182,7 +213,7 @@ public class PlayerControl : MonoBehaviour {
         target.y = 0;
         distance.y = 0;
         /*transform.position += distance * 5 * Time.deltaTime;*/
-        transform.DOMove(target, 0.25f);
+        transform.DOMove(target, 1f).SetEase(Ease.Linear);
 
         float angle = Mathf.Atan2(distance.x, distance.z) * Mathf.Rad2Deg;
         transform.rotation = Quaternion.Euler(new Vector3(0, angle, 0));
@@ -191,6 +222,14 @@ public class PlayerControl : MonoBehaviour {
     public void SetEnergy()
     {
         playerState.EnergyCount = 3;
+    }
+
+    IEnumerator MoveSpeedSet()
+    {
+        animator.SetFloat("Speed", 1);
+        yield return new WaitForSecondsRealtime(1);
+        animator.SetFloat("Speed", 0);
+        yield return 0;
     }
 
     IEnumerator EnergySubtract()

@@ -4,10 +4,11 @@ using UnityEngine;
 
 public class PlayerState : MonoBehaviour {
 
-    public int HealthCount;
+    public int MaxHealth;
+    public int MaxEnergy;
     public int EnergyCount;
-	// Use this for initialization
-	void Start () {
+    // Use this for initialization
+    void Start () {
 		
 	}
 	
